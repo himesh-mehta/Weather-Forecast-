@@ -550,6 +550,12 @@ async def point(lat: float = Query(..., ge=-90, le=90), lon: float = Query(..., 
     payload = day_payload(loc, hit["records"], hit["status"], date, hit["fetched_at"], hit["fetched_at"], kind="point")
     payload["week"] = {"city": loc["city"], "today": today_local(), "days": week_summary(hit["records"])}
     payload["cache_expires_at"] = (datetime.fromisoformat(hit["fetched_at"]) + POINT_TTL).isoformat()
+    # Context only - the point's own forecasts above are never replaced by a city's.
+    from ingest import MAHARASHTRA_BBOX as bb
+    from live import km_between
+    dist, hub = min((km_between(lat, lon, l["lat"], l["lon"]), l["city"]) for l in LOCATIONS)
+    payload["nearest_hub"] = {"city": hub, "distance_km": round(dist, 1)}
+    payload["in_maharashtra"] = bb["lat_min"] <= lat <= bb["lat_max"] and bb["lon_min"] <= lon <= bb["lon_max"]
     return payload
 
 

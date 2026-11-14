@@ -103,6 +103,7 @@ flowchart LR
 | `setup_scheduler.ps1` | Installs/removes the 4 Windows scheduled tasks |
 | `.github/workflows/weather_ingest.yml` | The same schedule on GitHub Actions (alternative to the PC tasks; see §11) |
 | `sync_data.py` | Pulls the forecasts the Actions workflow published (the `data` branch) into a local checkout |
+| `export.py` | Builds the public schema-2.0 feed (`latest_maharashtra.json`) and its gzipped timestamped snapshots |
 | `run_daily.bat` | Manual one-click run (`scheduler.py` with any args) |
 | `tests/test_pipeline.py` | Offline test suite |
 | `db_schema.sql` | **Not used.** Draft Postgres schema for a future migration (out of date vs. `history.py`) |
@@ -170,7 +171,7 @@ as a row of "—" with a reason when it has no data.
 | 22 | Foreca | `FORECA_KEY` | B | **none** | ⚠️ added late by the team: untested, no quota guard, maps 5 fields only |
 | 23 | Ambee | `AMBEE_KEY` | C | 100 | ✅ ~48 h of hourly data (today/day 3 partial) |
 | 24 | Google Weather | `GOOGLE_WEATHER_KEY` | C | 300 | ✅ working, **billing account**: keep the guard |
-| — | Open-Meteo Best Match / ICON / JMA | keyless | C | — | ✅ extra models, listed after the ranked slots |
+| — | Open-Meteo Best Match / ICON / JMA / GEM (Canada) | keyless | C | — | ✅ extra models, listed after the ranked slots |
 | — | Open-Meteo Current | keyless | A | — | ✅ "now" analysis (not a measurement) |
 | — | Apple WeatherKit | `APPLE_WEATHERKIT_JWT` | C | — | 🔑 no JWT, adapter **untested** |
 
@@ -179,7 +180,10 @@ Mumbai VABB, Nagpur VANP, Sambhajinagar VAAU, Kolhapur VAKP, Nashik VAOZ; **Pune
 have none**), CAMS air quality via Open-Meteo, a 15-minute nowcast from 5 models, and RainViewer radar.
 
 **Custom lat/lon** (`/api/point`) uses only `CUSTOM_POINT_PROVIDERS` (keyless and generous
-quotas); strict-quota services are reserved for the scheduled city runs.
+quotas); strict-quota services are reserved for the scheduled city runs. The response also includes
+`nearest_hub` (the closest of the 7 cities, with its distance) and `in_maharashtra` (inside
+`MAHARASHTRA_BBOX`). The dashboard shows these as a link to that city. A point's forecasts are
+never replaced by a nearby city's: elevation and the coast make a big difference, e.g. Lonavala vs. Pune.
 
 ---
 
@@ -326,10 +330,25 @@ on demand when it has fetching enabled.
 - restores `forecast_history.db` (quota counters + archive) and the AccuWeather location keys
   with `actions/cache`. This keeps the quota guard working across runs;
 - restores the previous forecasts from the `data` branch, so a provider that fails keeps its last good rows;
-- publishes `latest_forecasts.json` + `live_conditions.json` to the **`data` branch as a single
-  commit that is force-pushed every run**, so the repo history never grows.
+- publishes the files to the **`data` branch as a single commit that is force-pushed every run**.
+  Archived snapshots are carried forward from the previous commit, so files accumulate but git
+  history doesn't.
 
   Don't commit those files to `main`; they're git-ignored there on purpose.
+
+**What the `data` branch contains** (public if the repo is public):
+
+| File | What it is |
+|---|---|
+| `latest_maharashtra.json` | **Public feed, schema 2.0** (`export.py`). Contains `meta` (generated time in UTC and IST, data update time, units, bounding box) plus, per city: location (lat/lon, region, coastal, elevation), `daily_consensus` (median / min / max / models counted / agreement per field), and `provider_forecasts` (each provider's own daily values, its fetch time, and why any value wasn't counted). About 340 KB. |
+| `history/YYYY/MM/<UTC time>.json.gz` | Gzipped snapshot of that feed, **at most one per 6-hour UTC block**: ~41 KB each, ~4 a day, ~60 MB a year |
+| `latest_forecasts.json` | Internal cache with raw provider payloads (used by `sync_data.py` and the dashboard) |
+| `live_conditions.json` | Airport METARs, air quality and the 2-hour rain verdict |
+
+- **Direct URL:** `https://raw.githubusercontent.com/himesh-mehta/Weather-Forecast-/data/latest_maharashtra.json`
+- **jsDelivr** (`https://cdn.jsdelivr.net/gh/himesh-mehta/Weather-Forecast-@data/latest_maharashtra.json`) also works, but caches branch files for hours. Use the raw URL when freshness matters.
+- **No model-cycle field.** Upstream APIs don't say which model run (00z/06z/…) they served, so the feed gives each provider's actual fetch time instead of a guessed cycle.
+- **Long term:** once the archive passes a few hundred MB, move old years to a GitHub Release asset so each run's clone stays fast.
 
 **One-time setup:**
 1. Make `weather-aggregator/` the **root** of its own GitHub repository. The workflow must sit at

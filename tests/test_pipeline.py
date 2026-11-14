@@ -5,6 +5,8 @@ the real database (temp files / mocks). Run from the project folder:
     python -m unittest discover -s tests -v
 """
 import asyncio
+import gzip
+import json
 import os
 import sys
 import tempfile
@@ -196,6 +198,46 @@ class PoliteHttp(unittest.TestCase):
             asyncio.run(ingest._run_provider("Keyless", limited, None, ingest.LOCATIONS, None, status))
         self.assertEqual(len(calls), 1)  # first city only; the other 6 are not called
         self.assertTrue(all("429" in v["Keyless"] for v in status.values()))
+
+
+class PublicExport(unittest.TestCase):
+    def setUp(self):
+        import export
+        self.export = export
+        a = rec("ECMWF", "IFS", temp_max_c=34.0, precip_mm=0.0); a["city"] = "Mumbai"
+        b = rec("AccuWeather", "Daily", temp_max_c=36.0, precip_mm=0.0); b["city"] = "Mumbai"
+        w = rec("Windy", "GFS", temp_max_c=29.0); w["city"] = "Mumbai"; w["flags"] = ["trial"]
+        a["raw_payload"] = {"secret_looking": "should never be exported"}
+        self.cache = {"generated_at": "2026-11-13T00:30:00+00:00", "records": [a, b, w],
+                      "cities": {"Mumbai": {"fetched_at": "2026-11-13T00:30:00+00:00", "providers": {}}}}
+        self.now = ingest.parse_iso("2026-11-13T06:15:00Z")
+
+    def test_schema_timestamps_and_content(self):
+        with mock.patch.object(ingest, "load_cache", return_value=self.cache):
+            d = self.export.build_export(self.now)
+        m = d["meta"]
+        self.assertEqual(m["schema_version"], "2.0")
+        self.assertEqual(m["generated_at_utc"], "2026-11-13T06:15:00Z")
+        self.assertEqual(m["generated_at_ist"], "2026-11-13T11:45:00+05:30")
+        city = d["cities"]["Mumbai"]
+        day = city["daily_consensus"][0]
+        self.assertEqual(day["temp_max_c"]["median"], 35.0)          # Windy trial value not counted
+        self.assertEqual(day["temp_max_c"]["models_counted"], 2)
+        windy = next(p for p in city["provider_forecasts"] if p["provider"] == "Windy")
+        self.assertIn("trial", windy["daily"][0]["not_counted_in_consensus"]["temp_max_c"])
+        self.assertNotIn("should never be exported", json.dumps(d))   # raw payloads stay internal
+        self.assertNotIn("model_run_cycle", json.dumps(d))            # not reported upstream -> not invented
+
+    def test_snapshot_once_per_six_hour_block(self):
+        with tempfile.TemporaryDirectory() as tmp, mock.patch.object(ingest, "load_cache", return_value=self.cache):
+            out, arc = Path(tmp) / "latest.json", Path(tmp) / "history"
+            r1 = self.export.write(out, arc, now=self.now)
+            r2 = self.export.write(out, arc, now=ingest.parse_iso("2026-11-13T11:59:00Z"))
+            r3 = self.export.write(out, arc, now=ingest.parse_iso("2026-11-13T12:05:00Z"))
+            self.assertTrue(r1["snapshot"].endswith("2026-11-13T0615Z.json.gz"))
+            self.assertIsNone(r2["snapshot"])                          # same 06-12 UTC block
+            self.assertTrue(r3["snapshot"].endswith("2026-11-13T1205Z.json.gz"))
+            self.assertEqual(json.loads(gzip.decompress(Path(r1["snapshot"]).read_bytes()))["meta"]["schema_version"], "2.0")
 
 
 class HistoryArchive(unittest.TestCase):

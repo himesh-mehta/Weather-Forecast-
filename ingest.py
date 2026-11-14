@@ -53,6 +53,9 @@ LOCATIONS = [
      "region": "Vidarbha"},
 ]
 
+# Maharashtra (Sindhudurg -> Nandurbar, Arabian Sea coast -> Gadchiroli)
+MAHARASHTRA_BBOX = {"lat_min": 15.60, "lat_max": 22.03, "lon_min": 72.65, "lon_max": 80.89}
+
 # Normalised schema shared by every provider. Missing = None (rendered as "—").
 FIELDS = [
     # thermal
@@ -247,6 +250,7 @@ OPEN_METEO_MODELS = {
     "gfs_seamless": ("Open-Meteo", "GFS (NOAA)"),
     "icon_seamless": ("Open-Meteo", "ICON (DWD)"),
     "jma_seamless": ("Open-Meteo", "JMA"),
+    "gem_seamless": ("Open-Meteo", "GEM (Canada)"),
 }
 
 

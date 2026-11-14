@@ -619,6 +619,12 @@ function render() {
   if (d.fetch_paused) notice(`Data fetching is paused (<code>FETCH_PAUSED=1</code>). Showing the last saved data${age ? `, updated ${esc(age)}` : ""}. Custom locations need fetching turned back on.`);
   else if (!d.models.some(m => !m.placeholder)) notice(`No forecasts for <b>${place}</b> on this day yet. They'll appear after the next automatic update.`);
   else if (d.kind !== "point" && hrs > 12) notice(`These forecasts are from ${esc(age)}. Automatic updates may not have run; check that the PC was on.`);
+  else if (d.kind === "point" && d.nearest_hub) {
+    const h = d.nearest_hub, far = !d.in_maharashtra;
+    notice(`${far ? "This point is outside Maharashtra: forecasts still work, but there is no full-network city nearby. " : ""}`
+      + `Shown: ${d.models.filter(m => !m.placeholder).length} forecasts for this exact point. Nearest city with all services: `
+      + `<a href="?city=${encodeURIComponent(h.city)}" style="color:var(--accent)">${esc(h.city)}</a> (${h.distance_km} km).`);
+  }
   else notice("");
   renderHero(); renderTips(); renderWeek(); renderTabs(); renderPanel(); renderSources();
   loadLive();
