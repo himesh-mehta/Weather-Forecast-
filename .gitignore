@@ -1,0 +1,24 @@
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Local caches
+.cache/
+*.tmp
+
+# Generated data (history archive + run logs)
+forecast_history.db
+logs/
+
+# Runtime data written by the pipeline (re-created on the first run)
+latest_forecasts.json
+live_conditions.json
+*.json.tmp
+*.db

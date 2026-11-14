@@ -1,0 +1,157 @@
+# Scheduled weather ingestion on GitHub Actions.
+#
+# What it does each run:
+#   1. runs the offline test suite (a broken build never spends API quota)
+#   2. restores state from the previous run: quota counters + archive DB + AccuWeather location keys
+#      (actions/cache) and the last published forecasts (the `data` branch, so failed providers keep
+#      their last good rows)
+#   3. runs one cadence tier of scheduler.py (same code as on the PC)
+#   4. publishes latest_forecasts.json + live_conditions.json to the `data` branch as ONE commit that
+#      is overwritten every run (no history growth), saves state, uploads logs as an artifact
+#
+# Pause without editing this file: Settings > Secrets and variables > Actions > Variables >
+# New repository variable  FETCH_PAUSED = 1   (delete it, or set 0, to resume).
+
+name: Weather ingestion
+
+on:
+  schedule:                       # GitHub cron is UTC and can start several minutes late
+    - cron: "30 0 * * *"          # 06:00 IST  -> full run: every provider + daily archive snapshot
+    - cron: "30 12 * * *"         # 18:00 IST  -> tier C: strict-quota APIs + global model runs
+    - cron: "15 1-23/2 * * *"     # every 2 h  -> tier B: generous-quota APIs (06:45, 08:45 ... IST)
+  workflow_dispatch:
+    inputs:
+      tier:
+        description: "Tier to run (full = everything + archive snapshot)"
+        type: choice
+        options: [full, A, B, C, D]
+        default: B
+      force:
+        description: "full only: rerun even if today's snapshot already exists"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write                 # needed only to push the `data` branch
+
+concurrency:
+  group: weather-ingest           # runs queue up; two never overlap (shared quota counters)
+  cancel-in-progress: false
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      FETCH_PAUSED: ${{ vars.FETCH_PAUSED || '0' }}
+      WINDY_TRIAL: ${{ vars.WINDY_TRIAL || '1' }}
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run offline tests
+        run: python -m unittest discover -s tests
+
+      - name: Pick the tier for this run
+        id: tier
+        run: |
+          case "${{ github.event_name }}:${{ github.event.schedule }}" in
+            "schedule:30 0 * * *")  TIER=full ;;
+            "schedule:30 12 * * *") TIER=C ;;
+            schedule:*)             TIER=B ;;
+            *)                      TIER="${{ inputs.tier }}" ;;
+          esac
+          echo "tier=$TIER" >> "$GITHUB_OUTPUT"
+          echo "Running tier: $TIER"
+
+      - name: Restore state from previous runs
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            forecast_history.db
+            .cache/accuweather_location_keys.json
+          key: weather-state-${{ github.run_id }}
+          restore-keys: weather-state-
+
+      - name: Restore last published forecasts
+        run: |
+          if git fetch --depth=1 origin data 2>/dev/null; then
+            for f in latest_forecasts.json live_conditions.json; do
+              git show "FETCH_HEAD:$f" > "$f" 2>/dev/null || rm -f "$f"
+            done
+            echo "Restored previous data."
+          else
+            echo "No data branch yet (first run)."
+          fi
+
+      - name: Fetch forecasts
+        env:
+          WEATHERAPI_KEY: ${{ secrets.WEATHERAPI_KEY }}
+          OPENWEATHER_KEY: ${{ secrets.OPENWEATHER_KEY }}
+          VISUAL_CROSSING_KEY: ${{ secrets.VISUAL_CROSSING_KEY }}
+          TOMORROW_IO_KEY: ${{ secrets.TOMORROW_IO_KEY }}
+          WEATHERBIT_KEY: ${{ secrets.WEATHERBIT_KEY }}
+          METEOSOURCE_KEY: ${{ secrets.METEOSOURCE_KEY }}
+          ACCUWEATHER_KEY: ${{ secrets.ACCUWEATHER_KEY }}
+          METEOBLUE_KEY: ${{ secrets.METEOBLUE_KEY }}
+          WINDY_KEY: ${{ secrets.WINDY_KEY }}
+          STORMGLASS_KEY: ${{ secrets.STORMGLASS_KEY }}
+          AMBEE_KEY: ${{ secrets.AMBEE_KEY }}
+          GOOGLE_WEATHER_KEY: ${{ secrets.GOOGLE_WEATHER_KEY }}
+          APPLE_WEATHERKIT_JWT: ${{ secrets.APPLE_WEATHERKIT_JWT }}
+          METOFFICE_DATAHUB_KEY: ${{ secrets.METOFFICE_DATAHUB_KEY }}
+          XWEATHER_CLIENT_ID: ${{ secrets.XWEATHER_CLIENT_ID }}
+          XWEATHER_CLIENT_SECRET: ${{ secrets.XWEATHER_CLIENT_SECRET }}
+          WEATHER_UNION_KEY: ${{ secrets.WEATHER_UNION_KEY }}
+          FORECA_KEY: ${{ secrets.FORECA_KEY }}
+        run: |
+          ARGS="--tier ${{ steps.tier.outputs.tier }} --trigger scheduled"
+          if [ "${{ inputs.force }}" = "true" ]; then ARGS="$ARGS --force"; fi
+          python -X utf8 scheduler.py $ARGS
+
+      - name: Publish data to the data branch
+        if: success() && hashFiles('latest_forecasts.json') != ''
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          OUT="$RUNNER_TEMP/data"
+          mkdir -p "$OUT"
+          cp latest_forecasts.json "$OUT/"
+          [ -f live_conditions.json ] && cp live_conditions.json "$OUT/"
+          printf 'Weather data published by the "Weather ingestion" workflow.\nUpdated: %s (tier %s)\n' \
+            "$(date -u +%FT%TZ)" "${{ steps.tier.outputs.tier }}" > "$OUT/README.md"
+          cd "$OUT"
+          git init -q -b data
+          git add -A
+          git -c user.name="Weather Consensus Bot" -c user.email="weather-bot@users.noreply.github.com" \
+              commit -q -m "data: tier ${{ steps.tier.outputs.tier }} at $(date -u +%FT%TZ)"
+          # one-commit branch, force-pushed: always the latest data, never a growing history
+          git push -q -f "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" data
+          echo "Published to branch 'data'."
+
+      - name: Save state for the next run
+        if: always() && hashFiles('forecast_history.db') != ''
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            forecast_history.db
+            .cache/accuweather_location_keys.json
+          key: weather-state-${{ github.run_id }}
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: logs-${{ steps.tier.outputs.tier }}-${{ github.run_id }}
+          path: logs/
+          retention-days: 14
+          if-no-files-found: ignore
