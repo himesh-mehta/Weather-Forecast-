@@ -67,6 +67,20 @@ class Helpers(unittest.TestCase):
         self.assertEqual(ingest.moon_from_lunation(0.0)[0], "New Moon")
 
 
+class EnvLoading(unittest.TestCase):
+    def test_env_file_fills_empty_but_never_overrides(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            p = Path(tmp) / ".env"
+            p.write_text("WC_T_EMPTY=from_file\nWC_T_SET=from_file\nWC_T_NEW=new\nWC_T_DUP=first\nWC_T_DUP=last\n",
+                         encoding="utf-8")
+            with mock.patch.dict(os.environ, {"WC_T_EMPTY": "", "WC_T_SET": "from_env"}):
+                ingest.load_env_file(p)
+                self.assertEqual(os.environ["WC_T_EMPTY"], "from_file")  # empty Actions mapping gets filled
+                self.assertEqual(os.environ["WC_T_SET"], "from_env")     # real env value always wins
+                self.assertEqual(os.environ["WC_T_NEW"], "new")
+                self.assertEqual(os.environ["WC_T_DUP"], "last")         # later duplicate wins
+
+
 class NormalisedRecord(unittest.TestCase):
     def test_unknown_field_is_rejected(self):
         with self.assertRaises(ValueError):

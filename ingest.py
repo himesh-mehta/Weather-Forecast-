@@ -21,13 +21,27 @@ from datetime import datetime, timedelta, timezone
 from collections import defaultdict
 
 import httpx
-from dotenv import load_dotenv
+from dotenv import dotenv_values
 
 BASE_DIR = Path(__file__).resolve().parent
 CACHE_PATH = BASE_DIR / "latest_forecasts.json"
 ACCU_KEY_CACHE = BASE_DIR / ".cache" / "accuweather_location_keys.json"
 
-load_dotenv(BASE_DIR / ".env")
+
+def load_env_file(path: Path) -> list[str]:
+    """Load .env without overriding real environment values, but DO fill variables that exist
+    and are empty. In GitHub Actions every `KEY: ${{ secrets.KEY }}` mapping creates the variable
+    even when that secret isn't set (as ""), which must not hide the key from a DOTENV-written .env.
+    Non-empty environment values always win (e.g. the workflow's FETCH_PAUSED=0)."""
+    filled = []
+    for k, v in dotenv_values(path).items():   # a later duplicate in .env wins, like python-dotenv
+        if v not in (None, "") and not os.environ.get(k):
+            os.environ[k] = v
+            filled.append(k)
+    return filled
+
+
+load_env_file(BASE_DIR / ".env")
 
 from http_client import make_client, pace  # noqa: E402 (needs .env loaded first)
 
