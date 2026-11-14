@@ -329,9 +329,11 @@ on demand when it has fetching enabled.
    - `ACCUWEATHER_KEY`, `METEOBLUE_KEY`, `WINDY_KEY`, `STORMGLASS_KEY`, `AMBEE_KEY`, `GOOGLE_WEATHER_KEY`
    - `APPLE_WEATHERKIT_JWT`, `METOFFICE_DATAHUB_KEY`, `XWEATHER_CLIENT_ID`, `XWEATHER_CLIENT_SECRET`, `WEATHER_UNION_KEY`, `FORECA_KEY`
 
-   A missing secret just means that provider is skipped. With the GitHub CLI, run
-   `gh secret set NAME` and paste the value when asked. Don't upload the whole `.env`: it contains
-   settings and a database URL that aren't needed.
+   A missing secret just means that provider is skipped. Quickest way: install the GitHub CLI
+   (`winget install --id GitHub.cli`, then `gh auth login`) and run
+   `powershell -ExecutionPolicy Bypass -File tools\set_github_secrets.ps1`. It uploads exactly
+   these keys from your local `.env` and prints only their names. Don't upload the whole `.env`:
+   it contains settings and a database URL that aren't needed.
 3. **Optional, under the Variables tab:** `FETCH_PAUSED=1` pauses every run without touching code.
    `WINDY_TRIAL=0` is only for a paid Windy key.
 4. The workflow requests `contents: write` itself. If the push to `data` fails with 403, set
