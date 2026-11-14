@@ -52,9 +52,9 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v5
         with:
-          python-version: "3.14"
+          python-version: "3.12"
           cache: pip
 
       - name: Install dependencies
@@ -126,19 +126,30 @@ jobs:
           TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           OUT="$RUNNER_TEMP/data"
-          mkdir -p "$OUT"
+          # Clone existing data branch if present, or initialize fresh
+          git clone --depth=1 --branch=data "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "$OUT" 2>/dev/null || mkdir -p "$OUT"
+          
+          # 1. Update latest live files
           cp latest_forecasts.json "$OUT/"
           [ -f live_conditions.json ] && cp live_conditions.json "$OUT/"
-          printf 'Weather data published by the "Weather ingestion" workflow.\nUpdated: %s (tier %s)\n' \
+          
+          # 2. Archive timestamped historical snapshot (compressed, ~15 KB)
+          HIST_DIR="$OUT/history/$(date -u +%Y/%m)"
+          mkdir -p "$HIST_DIR"
+          gzip -c latest_forecasts.json > "$HIST_DIR/$(date -u +%Y-%m-%d_%H%MZ).json.gz"
+          
+          # 3. Write README metadata with timestamps
+          printf '# Maharashtra Weather Data Stream\n\n- **Last Updated (UTC):** %s\n- **Cadence Tier:** %s\n- **Locations:** Mumbai, Ratnagiri, Pune, Kolhapur, Nashik, Chhatrapati Sambhajinagar, Nagpur\n- **History:** Timestamped snapshots stored under `history/YYYY/MM/`\n' \
             "$(date -u +%FT%TZ)" "${{ steps.tier.outputs.tier }}" > "$OUT/README.md"
+            
           cd "$OUT"
-          git init -q -b data
+          git config user.name "Weather Consensus Bot"
+          git config user.email "weather-bot@users.noreply.github.com"
+          git checkout -B data
           git add -A
-          git -c user.name="Weather Consensus Bot" -c user.email="weather-bot@users.noreply.github.com" \
-              commit -q -m "data: tier ${{ steps.tier.outputs.tier }} at $(date -u +%FT%TZ)"
-          # one-commit branch, force-pushed: always the latest data, never a growing history
-          git push -q -f "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" data
-          echo "Published to branch 'data'."
+          git diff --staged --quiet || git commit -m "data: tier ${{ steps.tier.outputs.tier }} at $(date -u +%FT%TZ)"
+          git push "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" data
+          echo "Published latest data and timestamped history to branch 'data'."
 
       - name: Save state for the next run
         if: always() && hashFiles('forecast_history.db') != ''
