@@ -22,3 +22,8 @@ latest_forecasts.json
 live_conditions.json
 *.json.tmp
 *.db
+
+# API sheet exports contain live keys - never commit
+*.xlsx
+*.xls
+*.csv
