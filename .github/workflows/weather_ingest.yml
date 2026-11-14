@@ -45,6 +45,8 @@ jobs:
     env:
       FETCH_PAUSED: ${{ vars.FETCH_PAUSED || '0' }}
       WINDY_TRIAL: ${{ vars.WINDY_TRIAL || '1' }}
+      # contact for the User-Agent (MET Norway / Open-Meteo fair-use terms): this repo's URL
+      CONTACT_URL: ${{ github.server_url }}/${{ github.repository }}
     steps:
       - name: Check out code
         uses: actions/checkout@v5

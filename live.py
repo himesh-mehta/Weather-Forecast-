@@ -19,9 +19,10 @@ from pathlib import Path
 import httpx
 
 from ingest import BASE_DIR, LOCATIONS, LOCAL_TZ, TZ_NAME, ensure_fetching_allowed, redact
+from http_client import USER_AGENT, make_client
 
 LIVE_PATH = BASE_DIR / "live_conditions.json"
-UA = {"User-Agent": "WeatherConsensusDashboard/1.0 (college project)"}
+UA = {"User-Agent": USER_AGENT}
 AIRPORT_MAX_KM = 60          # farther than this, an airport doesn't represent the place
 MAHARASHTRA_BBOX = "15.5,72.5,22.2,80.9"
 NOWCAST_MODELS = ["best_match", "ecmwf_ifs025", "gfs_seamless", "icon_seamless", "jma_seamless"]
@@ -174,7 +175,7 @@ async def radar_frames() -> dict:
     now = datetime.now(timezone.utc)
     if _radar_cache["at"] and now - _radar_cache["at"] < timedelta(minutes=5):
         return _radar_cache["data"]
-    async with httpx.AsyncClient(timeout=20, headers=UA) as client:
+    async with make_client(timeout=20) as client:
         r = await client.get("https://api.rainviewer.com/public/weather-maps.json")
         r.raise_for_status()
         wm = r.json()
@@ -212,7 +213,7 @@ async def refresh_cities(cities=None) -> dict:
     """Fetch live conditions for the configured cities and save them (called by scheduler tier A)."""
     ensure_fetching_allowed()
     locs = [l for l in LOCATIONS if not cities or l["city"] in cities]
-    async with httpx.AsyncClient(timeout=25, follow_redirects=True) as client:
+    async with make_client() as client:
         try:
             metars = await fetch_metars(client, MAHARASHTRA_BBOX)
         except Exception:  # noqa: BLE001 - airport feed down: still save AQ + nowcast
@@ -239,7 +240,7 @@ def load_live() -> dict:
 async def live_for_custom(lat: float, lon: float) -> dict:
     ensure_fetching_allowed()
     bbox = f"{lat - 0.6:.2f},{lon - 0.6:.2f},{lat + 0.6:.2f},{lon + 0.6:.2f}"
-    async with httpx.AsyncClient(timeout=25, follow_redirects=True) as client:
+    async with make_client() as client:
         try:
             metars = await fetch_metars(client, bbox)
         except Exception:  # noqa: BLE001

@@ -29,6 +29,8 @@ ACCU_KEY_CACHE = BASE_DIR / ".cache" / "accuweather_location_keys.json"
 
 load_dotenv(BASE_DIR / ".env")
 
+from http_client import make_client, pace  # noqa: E402 (needs .env loaded first)
+
 # All configured cities are in India -> one fixed offset, no tz database needed
 # (Windows ships without IANA tz data, so zoneinfo would need the tzdata package).
 TZ_NAME = "Asia/Kolkata"
@@ -316,8 +318,7 @@ async def fetch_open_meteo_and_ecmwf(client: httpx.AsyncClient, loc: dict) -> li
 async def fetch_met_norway(client: httpx.AsyncClient, loc: dict) -> list[dict]:
     url = "https://api.met.no/weatherapi/locationforecast/2.0/complete"
     params = {"lat": round(loc["lat"], 4), "lon": round(loc["lon"], 4)}
-    headers = {"User-Agent": "WeatherConsensusDashboard/1.0 (college mini-project)"}
-    resp = await client.get(url, params=params, headers=headers)
+    resp = await client.get(url, params=params)  # shared client sends the User-Agent + contact MET requires
     resp.raise_for_status()
 
     bk = HourlyBuckets()
@@ -431,7 +432,7 @@ async def fetch_nasa_power(client: httpx.AsyncClient, loc: dict) -> list[dict]:
 async def fetch_noaa_nws(client: httpx.AsyncClient, loc: dict) -> list[dict]:
     if loc.get("country") != "US":
         return []
-    headers = {"User-Agent": "WeatherConsensusDashboard/1.0"}
+    headers = {}
     p_resp = await client.get(
         f"https://api.weather.gov/points/{round(loc['lat'], 4)},{round(loc['lon'], 4)}", headers=headers)
     p_resp.raise_for_status()
@@ -1162,11 +1163,22 @@ async def _run_provider(name, fn, client, locs, key, status):
             got = await (fn(client, loc, key) if key is not None else fn(client, loc))
             rows.extend(got)
             status[loc["city"]][name] = f"ok ({len(got)} days)" if got else "n/a for location"
+        except httpx.HTTPStatusError as exc:
+            msg = redact(f"HTTP {exc.response.status_code}: {exc}")[:200]
+            status[loc["city"]][name] = f"error: {msg}"
+            print(f"[WARN] {name} / {loc['city']}: {msg}")
+            if exc.response.status_code == 429:
+                # Rate limited: stop calling this provider for the rest of the run (no retries,
+                # no key rotation). Remaining cities keep their last good data.
+                for rest in locs[locs.index(loc) + 1:]:
+                    status[rest["city"]][name] = "error: rate limited (HTTP 429) - not called"
+                print(f"[WARN] {name}: rate limited, skipping its remaining cities this run")
+                break
         except Exception as exc:  # noqa: BLE001 - one bad provider must not sink the run
             msg = redact(f"{type(exc).__name__}: {exc}")[:200]
             status[loc["city"]][name] = f"error: {msg}"
             print(f"[WARN] {name} / {loc['city']}: {msg}")
-        await asyncio.sleep(0.4)
+        await pace()
     return rows
 
 
@@ -1229,7 +1241,7 @@ async def fetch_point(lat: float, lon: float) -> dict:
     for name in [n for n, _ in TIER1] + [n for n, _, _ in TIER2]:
         if name not in CUSTOM_POINT_PROVIDERS:
             status[label][name] = "skipped: custom point"
-    async with httpx.AsyncClient(timeout=25.0, follow_redirects=True) as client:
+    async with make_client() as client:
         results = await asyncio.gather(*[_run_provider(n, fn, client, [loc], key, status) for n, fn, key in jobs])
     return {"loc": loc, "records": [r for rows in results for r in rows], "status": dict(status[label]),
             "fetched_at": datetime.now(timezone.utc).isoformat()}
@@ -1276,7 +1288,7 @@ async def run_daily_ingestion(cities=None, out_path: Path = CACHE_PATH, provider
     jobs = _build_jobs(providers, locs, status)
     print(f"Fetching {len(jobs)} providers for {[l['city'] for l in locs]}")
 
-    async with httpx.AsyncClient(timeout=25.0, follow_redirects=True) as client:
+    async with make_client() as client:
         results = await asyncio.gather(*[
             _run_provider(name, fn, client, locs, key, status) for name, fn, key in jobs
         ])

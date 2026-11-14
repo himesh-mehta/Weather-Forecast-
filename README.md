@@ -93,6 +93,7 @@ flowchart LR
 | File | What it is |
 |---|---|
 | `ingest.py` | Provider adapters, normalised schema (`FIELDS`, `make_record`), tiers, quotas, merge into cache, kill switch. CLI: `python ingest.py [cities] [--providers ...] [--tier X]` |
+| `http_client.py` | Shared HTTP client for all upstream calls: User-Agent with contact (`CONTACT_URL`), retry with backoff on transient errors, `Retry-After`, 429 handling, jittered pacing |
 | `live.py` | "Right now" layer: METAR (aviationweather.gov), air quality (Open-Meteo/CAMS), 2-h rain verdict, RainViewer radar frames |
 | `scheduler.py` | Runner used by the scheduled tasks: lock, network wait, logging, archive. `--tier`, `--plan`, `--check`, `--force` |
 | `history.py` | SQLite archive: daily snapshots, run log, API usage counter, live observations, sky reports |
@@ -197,6 +198,18 @@ quotas); strict-quota services are reserved for the scheduled city runs.
   the next call would pass **90 %**. That covers scheduler runs, custom lookups and manual runs alike.
 - **Only the full 06:00 run writes `daily_forecasts`**: one clean snapshot per day, for lead-time and
   accuracy analysis. The full run skips if today's snapshot already exists (`--force` overrides).
+- **Fair use (`http_client.py`):**
+  - Every request carries `User-Agent: WeatherConsensus/1.0 (+CONTACT_URL)`.
+  - Calls to the same provider are spaced 250–450 ms apart.
+  - Transient failures (timeouts, 500/502/503/504) are retried at most twice, with exponential
+    backoff and jitter, honouring `Retry-After`.
+  - On **HTTP 429** the provider is not called again for the rest of that run. Its cities keep their last good data.
+- **Deliberately not built: rotating several free accounts/keys to get past a provider's limit.**
+  It breaks the providers' terms and gets every key involved banned. If a provider's free tier is
+  too small, use a paid plan or ask the provider for a higher limit.
+- **When models update:** global models (ECMWF, GFS) run at 00/06/12/18 UTC but become available
+  hours later (ECMWF open data ~6–8 h after each cycle, GFS ~3.5–5 h). Polling every 2 hours picks
+  each cycle up within about 2 hours of release.
 - **Before changing a cadence:** check the provider's real free-tier limit and work out
   `calls/day = runs/day × 7 cities × cost`. Run `python scheduler.py --plan --tier B` to see today's usage.
 

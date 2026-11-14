@@ -21,6 +21,7 @@ _TMP_DB = tempfile.NamedTemporaryFile(suffix=".db", delete=False); _TMP_DB.close
 os.environ["WEATHER_DB_PATH"] = _TMP_DB.name   # never touch the real archive
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+import httpx    # noqa: E402
 import history  # noqa: E402
 import ingest   # noqa: E402
 import main     # noqa: E402
@@ -137,6 +138,64 @@ class QuotaGuard(unittest.TestCase):
             asyncio.run(ingest._run_provider("TEST", fake_adapter, None, ingest.LOCATIONS, None, status))
         self.assertEqual(len(calls), 4)  # 90% of 5 = 4.5 -> 4 calls allowed
         self.assertTrue(any(v.startswith("skipped: daily quota") for c in status.values() for v in c.values()))
+
+
+class PoliteHttp(unittest.TestCase):
+    """http_client: retries transient errors, never hammers a 429, sends a User-Agent."""
+
+    def _run(self, responses):
+        import http_client
+        seen = []
+
+        def handler(request):
+            seen.append(request)
+            status, headers = responses[min(len(seen) - 1, len(responses) - 1)]
+            return httpx.Response(status, headers=headers, json={})
+
+        transport = http_client.PoliteTransport(httpx.MockTransport(handler), sleep=mock.AsyncMock())
+
+        async def go():
+            async with httpx.AsyncClient(transport=transport, headers={"User-Agent": http_client.USER_AGENT}) as c:
+                return await c.get("https://example.test/x")
+
+        return asyncio.run(go()), seen
+
+    def test_retries_503_then_succeeds(self):
+        resp, seen = self._run([(503, {}), (503, {}), (200, {})])
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(len(seen), 3)
+
+    def test_gives_up_after_max_retries(self):
+        resp, seen = self._run([(503, {})])
+        self.assertEqual(resp.status_code, 503)
+        self.assertEqual(len(seen), 3)  # 1 try + 2 retries, then stop
+
+    def test_429_with_long_retry_after_is_not_retried(self):
+        resp, seen = self._run([(429, {"Retry-After": "3600"})])
+        self.assertEqual(resp.status_code, 429)
+        self.assertEqual(len(seen), 1)
+
+    def test_429_short_retry_after_is_honoured_once(self):
+        resp, seen = self._run([(429, {"Retry-After": "2"}), (429, {"Retry-After": "2"})])
+        self.assertEqual(len(seen), 2)  # one polite retry, never a loop
+
+    def test_user_agent_is_sent(self):
+        _, seen = self._run([(200, {})])
+        self.assertTrue(seen[0].headers["user-agent"].startswith("WeatherConsensus/1.0"))
+
+    def test_provider_stops_after_429(self):
+        calls = []
+
+        async def limited(client, loc, key=None):
+            calls.append(loc["city"])
+            raise httpx.HTTPStatusError("429", request=httpx.Request("GET", "https://x"),
+                                        response=httpx.Response(429))
+
+        with mock.patch.object(ingest, "pace", new=mock.AsyncMock()):
+            status = defaultdict(dict)
+            asyncio.run(ingest._run_provider("Keyless", limited, None, ingest.LOCATIONS, None, status))
+        self.assertEqual(len(calls), 1)  # first city only; the other 6 are not called
+        self.assertTrue(all("429" in v["Keyless"] for v in status.values()))
 
 
 class HistoryArchive(unittest.TestCase):
