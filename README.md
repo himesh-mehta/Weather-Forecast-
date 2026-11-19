@@ -1,15 +1,13 @@
-# Weather Consensus: Maharashtra multi-provider forecast aggregator
+# Weather Consensus: Maharashtra Multi-Provider Forecast Aggregator
 
-Fetches daily forecasts for 7 Maharashtra cities from ~20 weather services, normalises them into
-one schema, and shows them side by side on a dashboard with an **ensemble consensus**: median,
-spread, and how many services agree. It also has a "right now" layer (airport METARs, air
-quality, a 2-hour rain verdict, radar) and forecasts for any latitude/longitude.
+Fetches daily forecasts for 7 Maharashtra cities from 20+ weather services and numerical weather prediction (NWP) models, normalises them into one unified schema, and displays them side by side on an interactive dashboard with an **ensemble consensus**: median, interquartile spread, and agreement confidence. It also features an interactive **Google/ECMWF-style meteogram**, a "right now" observation layer (airport METARs, air quality, 2-hour rain verdict, Doppler radar), and on-demand point forecasts for any latitude/longitude in Maharashtra.
 
-> **Status at handover (13 Nov 2026)**
-> - **All data fetching is paused**: `FETCH_PAUSED=1` in `.env`, and the Windows scheduled tasks are uninstalled.
->   The dashboard still runs and serves the last saved data. See [Resuming fetching](#resuming-fetching).
-> - 21 offline tests pass (`python -m unittest discover -s tests`).
-> - Tested on Windows 11 with Python 3.14.
+> **Active Project Status (November 2026)**
+> - **Automated Cloud Ingestion is LIVE**: GitHub Actions runs automatically every 6 hours, archiving timestamped snapshots to the [`data` branch](https://github.com/himesh-mehta/Weather-Forecast-/tree/data).
+> - **Live Public Feed (Schema 2.0)**: [latest_maharashtra.json](https://raw.githubusercontent.com/himesh-mehta/Weather-Forecast-/data/latest_maharashtra.json) (updated 4x daily).
+> - **Zero-Key Local Demo**: Run `python sync_data.py` to pull the latest GitHub data stream; the dashboard works out of the box with zero API keys required.
+> - **32 offline tests pass**: `python -m unittest discover -s tests` (100% passing in ~0.5s).
+> - Tested on Windows 11 and Ubuntu (GitHub Actions runner) with Python 3.11 / 3.12 / 3.14.
 
 ---
 
@@ -18,38 +16,42 @@ quality, a 2-hour rain verdict, radar) and forecasts for any latitude/longitude.
 2. [How it works](#2-how-it-works)
 3. [Project layout](#3-project-layout)
 4. [Data model](#4-data-model)
-5. [Providers](#5-providers)
+5. [Providers and models](#5-providers-and-models)
 6. [Fetch cadence and quota guard](#6-fetch-cadence-and-quota-guard)
 7. [Consensus rules](#7-consensus-rules)
 8. [Data integrity rules](#8-data-integrity-rules-non-negotiable)
-9. [HTTP API](#9-http-api)
-10. [Security](#10-security)
-11. [Operations runbook](#11-operations-runbook)
-12. [Integration plan for developers](#12-integration-plan-for-developers)
-13. [Known issues and caveats](#13-known-issues-and-caveats)
-14. [Testing](#14-testing)
+9. [HTTP API & public feed](#9-http-api--public-data-feed)
+10. [Interactive dashboard & meteogram](#10-interactive-dashboard--meteogram)
+11. [Security](#11-security)
+12. [Cloud automation & operations runbook](#12-cloud-automation--operations-runbook)
+13. [Integration plan for developers](#13-integration-plan-for-developers)
+14. [Known issues and caveats](#14-known-issues-and-caveats)
+15. [Testing](#15-testing)
 
 ---
 
 ## 1. Quick start
 
+### Zero-Key Quick Start (Recommended for Testing & Demos)
+You do **not** need any API keys to run and inspect the full dashboard. A single command pulls the latest live data collected by the GitHub Actions cloud pipeline:
+
 ```bash
 cd weather-aggregator
 python -m venv .venv && .venv\Scripts\activate      # macOS/Linux: source .venv/bin/activate
 pip install -r requirements.txt
-copy .env.example .env                               # then fill in the keys you have
-uvicorn main:app --host 127.0.0.1 --port 8000        # dashboard: http://127.0.0.1:8000
+python sync_data.py                                # pulls latest multi-model forecasts from the data branch
+uvicorn main:app --reload --port 8000              # open http://127.0.0.1:8000
 ```
 
-A fresh clone has **no data yet**: `latest_forecasts.json`, `live_conditions.json` and
-`forecast_history.db` are generated and git-ignored. To fetch once:
-
-```bash
-# set FETCH_PAUSED=0 in .env first
-python scheduler.py            # full run: every provider, all 7 cities, + daily archive snapshot
-```
-
-Keys are **not** in the repo. Get them from the project owner through a password manager.
+### Full Ingestion Mode (With API Keys)
+If you want to trigger fresh upstream API calls locally:
+1. Copy `.env.example` to `.env`.
+2. Fill in your keys (e.g., `WEATHERAPI_KEY`, `OPENWEATHER_KEY`, `ACCUWEATHER_KEY`, `GOOGLE_WEATHER_KEY`, etc.).
+3. Set `FETCH_PAUSED=0` in `.env`.
+4. Run:
+   ```bash
+   python scheduler.py                             # full run across all 7 cities + daily archive snapshot
+   ```
 
 ---
 
@@ -168,9 +170,9 @@ as a row of "—" with a reason when it has no data.
 | 19 | Met Office DataHub (Global Spot) | `METOFFICE_DATAHUB_KEY` | B | 360 | 🔑 **no key yet**: adapter written, **untested** |
 | 20 | Xweather | `XWEATHER_CLIENT_ID` + `_SECRET` | B | 1000 | ✅ working |
 | 21 | Weather Union (Zomato, live stations) | `WEATHER_UNION_KEY` | A | 1000 | ✅ Mumbai/Pune/Nashik/Nagpur only |
-| 22 | Foreca | `FORECA_KEY` | B | **none** | ⚠️ added late by the team: untested, no quota guard, maps 5 fields only |
-| 23 | Ambee | `AMBEE_KEY` | C | 100 | ✅ ~48 h of hourly data (today/day 3 partial) |
-| 24 | Google Weather | `GOOGLE_WEATHER_KEY` | C | 300 | ✅ working, **billing account**: keep the guard |
+| 22 | Foreca | `FORECA_KEY` | B | 300 | ✅ working (tested against live API, metric units, 7-day forecast) |
+| 23 | Ambee | `AMBEE_KEY` | C | 100 | ✅ working (SI units metric, ~48 h hourly coverage) |
+| 24 | Google Weather | `GOOGLE_WEATHER_KEY` | C | 300 | ✅ working (metric 7-day forecast; daily low on next-day cycle) |
 | — | Open-Meteo Best Match / ICON / JMA / GEM (Canada) | keyless | C | — | ✅ extra models, listed after the ranked slots |
 | — | Open-Meteo Current | keyless | A | — | ✅ "now" analysis (not a measurement) |
 | — | Apple WeatherKit | `APPLE_WEATHERKIT_JWT` | C | — | 🔑 no JWT, adapter **untested** |
@@ -250,30 +252,57 @@ These came from the product owner. Keep them when you add providers:
 
 ---
 
-## 9. HTTP API
+## 9. HTTP API & Public Data Feed
+
+### 9.1 Public Data Stream (Zero-Key / CDN)
+For third-party frontends, mobile apps, and external consumers, the GitHub Actions runner publishes pre-computed consensus payloads to the `data` branch every 6 hours:
+
+| Feed | URL | Update Frequency | Description |
+|---|---|---|---|
+| **Public Feed (Schema 2.0)** | [`latest_maharashtra.json`](https://raw.githubusercontent.com/himesh-mehta/Weather-Forecast-/data/latest_maharashtra.json) | Every 6 hours | Per-city location, daily consensus, and individual provider predictions with reasons (~41 KB gzipped). |
+| **Fast Global CDN** | [`jsdelivr CDN`](https://cdn.jsdelivr.net/gh/himesh-mehta/Weather-Forecast-@data/latest_maharashtra.json) | Cached edge | High-availability global edge cache for high-traffic apps. |
+| **Live Observations** | [`live_conditions.json`](https://raw.githubusercontent.com/himesh-mehta/Weather-Forecast-/data/live_conditions.json) | Continuous | Real-time METAR reports, AQI, and 2-hour rain nowcast. |
+| **Timestamped Archive** | [`history/YYYY/MM/...`](https://github.com/himesh-mehta/Weather-Forecast-/tree/data/history) | 4x daily | Gzipped historical snapshots for longitudinal accuracy tracking. |
+
+### 9.2 FastAPI REST Endpoints (Local or Hosted)
 
 | Method | Path | Purpose |
 |---|---|---|
-| GET | `/` | Dashboard |
-| GET | `/api/locations` | Configured cities |
-| GET | `/api/today?city=&date=` | Every provider row for a city/day + consensus |
-| GET | `/api/week?city=` | Ensemble summary per day (7-day strip) |
-| GET | `/api/consensus?city=&date=` | Consensus statistics only |
-| GET | `/api/timeseries?city=&metric=` (or `lat=&lon=` after `/api/point`) | 7-day values per provider/model for one metric + range of counted forecasts (dashboard meteogram) |
-| GET | `/api/divergence?date=` | Agreement per city (coastal vs. inland) |
-| GET | `/api/point?lat=&lon=&date=` | Any coordinate, fetched on demand, cached 2 h (max 20 new places/hour) |
-| GET | `/api/live?city=` or `?lat=&lon=` | METAR, air quality, 2-h rain verdict, sky reports |
-| GET | `/api/radar` | RainViewer frames (past ~2 h) |
-| POST | `/api/report-sky` | `{"sky": "clear|cloudy|drizzle|heavy", "city": ...}` or with `lat`/`lon` |
-| GET | `/api/history?city=&date=` | How a day's forecast changed across daily snapshots |
-| GET | `/api/accuracy?city=&field=` | Mean absolute error per provider vs. NASA POWER (needs ~4+ days of snapshots) |
-| GET | `/api/observations?city=&hours=` | Archived live readings |
-| GET | `/api/runs` | Scheduler runs (full detail for admins only) |
-| GET | `/api/usage` | **Admin:** today's calls vs. limits |
+| GET | `/` | Single-page interactive dashboard with Meteogram |
+| GET | `/api/locations` | Configured Maharashtra regional hubs and coordinates |
+| GET | `/api/today?city=&date=` | Full multi-model consensus, provider table, and deltas for a city |
+| GET | `/api/week?city=` | 7-day daily forecast strip (high/low, rain, wind, agreement) |
+| GET | `/api/timeseries?city=&metric=` | 7-day multi-model trajectories + ensemble median & spread corridor |
+| GET | `/api/consensus?city=&date=` | Statistical summary only (median, mean, spread, standard deviation) |
+| GET | `/api/point?lat=&lon=&date=` | On-demand point forecast for any GPS coordinate in Maharashtra |
+| GET | `/api/live?city=` or `?lat=&lon=` | METAR airport reports, CAMS air quality, 2-h rain verdict |
+| GET | `/api/radar` | RainViewer Doppler radar frames (past ~2 h) |
+| GET | `/api/divergence?date=` | Cross-regional agreement comparisons (coastal vs. inland) |
+| POST | `/api/report-sky` | Crowdsourced local sky observation (`clear`, `cloudy`, `drizzle`, `heavy`) |
+| GET | `/api/history?city=&date=` | Forecast evolution across consecutive lead times |
+| GET | `/api/accuracy?city=&field=` | Historical Mean Absolute Error (MAE) per provider |
+| GET | `/api/runs` | Automated scheduler run log |
+| GET | `/api/usage` | **Admin:** Real-time API call counters vs. provider quotas |
 
 ---
 
-## 10. Security
+## 10. Interactive Dashboard & Meteogram
+
+The dashboard (`templates/index.html`) includes a dual-mode meteorological meteogram powered by Chart.js with Fritsch-Carlson monotone cubic spline interpolation:
+
+1. **Consensus Mode (Google Weather Style)**:
+   * Smooth monotonic temperature trajectory in golden amber with a gentle vertical gradient fill.
+   * Direct numerical labels rendered directly above each peak (`34.8°`, `34.1°`) for instant legibility.
+   * A synchronized 7-day card strip below the chart with weather condition icons and high/low pairs. Clicking any card navigates directly to that day.
+   * A subtle, non-intrusive Confidence Spread Ribbon (`[min, max]`) that can be toggled on/off.
+2. **All Models Mode (Windy / ECMWF Style)**:
+   * Overlays individual model curves (ECMWF, GFS, ICON, GEM, AccuWeather, Google Weather, Foreca, etc.) in a curated meteorological palette.
+   * **Interactive Trajectory Isolation**: Hovering over any provider pill highlights its specific forecast in bold (3px stroke) and gently dims other lines (20% opacity), eliminating visual clutter.
+   * Dark glassmorphic tooltip with sorted model breakdown and exact delta spreads.
+
+---
+
+## 11. Security
 
 `security.py` is pure Starlette middleware with no extra dependencies:
 
@@ -296,7 +325,7 @@ These came from the product owner. Keep them when you add providers:
 
 ---
 
-## 11. Operations runbook
+## 12. Operations runbook
 
 ### Resuming fetching
 1. Set `FETCH_PAUSED=0` in `.env`, then restart `uvicorn`, which reads `.env` at start-up.
@@ -410,7 +439,7 @@ python -m unittest discover -s tests -v      # tests
 
 ---
 
-## 12. Integration plan for developers
+## 13. Integration plan for developers
 
 ### 12.1 Checklist: adding a new provider
 
@@ -480,7 +509,7 @@ python -m unittest discover -s tests -v      # tests
 
 ---
 
-## 13. Known issues and caveats
+## 14. Known issues and caveats
 
 - **Windy:** the trial key returns shuffled data. It's flagged and excluded; set `WINDY_TRIAL=0` only with a paid key.
 - **Pune and Ratnagiri:** no airport METAR within 60 km (Pune's VAPO is an Air Force field and isn't in the public feed).
@@ -494,13 +523,14 @@ python -m unittest discover -s tests -v      # tests
 
 ---
 
-## 14. Testing
+## 15. Testing
 
 ```bash
-python -m unittest discover -s tests -v     # 21 tests, ~0.5 s, no network, no writes to the real DB
+python -m unittest discover -s tests -v     # 32 tests, ~0.5 s, no network, no writes to the real DB
 ```
 
 The suite covers parsing helpers, secret redaction, the normalised record, consensus and exclusion
 rules, the always-listed provider order, the quota guard, the SQLite archive, the kill switch,
-input validation, the security layer and admin auth. It forces `FETCH_PAUSED=1`, so it can never
+input validation, the security layer, admin auth, the export schema 2.0 serializer, and
+nearest-hub geospatial distance calculations. It forces `FETCH_PAUSED=1`, so it can never
 spend API quota. `pytest` also runs it unchanged.
