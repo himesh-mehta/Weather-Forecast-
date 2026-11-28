@@ -1,0 +1,618 @@
+{
+ "Mumbai": {
+  "fetched_at": "2026-11-28T08:18:58.194652+00:00",
+  "metar": {
+   "icao": "VABB",
+   "name": "Mumbai/Shivaji Intl",
+   "distance_km": 3.3,
+   "elevation_m": 14,
+   "observed_at": "2026-11-28T08:00:00.000Z",
+   "temp_c": 35,
+   "dew_point_c": 16,
+   "wind_dir_deg": 250,
+   "wind_variable": false,
+   "wind_kph": 9.3,
+   "gust_kph": null,
+   "visibility_km": 2.5,
+   "visibility_plus": false,
+   "qnh_hpa": 1014,
+   "weather": "smoke",
+   "clouds": [
+    "no significant cloud"
+   ],
+   "flight_category": "IFR",
+   "raw": "METAR VABB 280800Z 25005KT 2500 FU NSC 35/16 Q1014 NOSIG",
+   "elevation_diff_m": -8
+  },
+  "metar_error": null,
+  "air_quality": {
+   "time": "2026-11-28T13:30",
+   "us_aqi": 151,
+   "european_aqi": 175,
+   "pm2_5": 64.5,
+   "pm10": 65.7,
+   "no2": 22.7,
+   "o3": 255.0,
+   "so2": 32.2,
+   "co": 475.0,
+   "units": "µg/m³",
+   "peak_24h_us_aqi": 205,
+   "peak_24h_at": "2026-11-28T19:00",
+   "source": "Open-Meteo Air Quality (CAMS global model)"
+  },
+  "air_quality_error": null,
+  "nowcast": {
+   "elevation_m": 6.0,
+   "window": {
+    "from": "2026-11-28T13:15",
+    "to": "2026-11-28T15:00"
+   },
+   "verdict": "dry",
+   "models_total": 5,
+   "models_wet": 0,
+   "agreement_pct": 100,
+   "earliest_start": null,
+   "max_total_mm": 0.0,
+   "models": [
+    {
+     "model": "Open-Meteo Best Match",
+     "wet": false,
+     "total_mm": 0.0,
+     "starts_at": null,
+     "max_probability_pct": 0
+    },
+    {
+     "model": "ECMWF",
+     "wet": false,
+     "total_mm": 0.0,
+     "starts_at": null,
+     "max_probability_pct": 0
+    },
+    {
+     "model": "GFS (NOAA)",
+     "wet": false,
+     "total_mm": 0.0,
+     "starts_at": null,
+     "max_probability_pct": 0
+    },
+    {
+     "model": "ICON (DWD)",
+     "wet": false,
+     "total_mm": 0.0,
+     "starts_at": null,
+     "max_probability_pct": 0
+    },
+    {
+     "model": "JMA",
+     "wet": false,
+     "total_mm": 0.0,
+     "starts_at": null,
+     "max_probability_pct": null
+    }
+   ]
+  },
+  "nowcast_error": null
+ },
+ "Ratnagiri": {
+  "fetched_at": "2026-11-28T08:18:58.576697+00:00",
+  "metar": null,
+  "metar_error": null,
+  "air_quality": {
+   "time": "2026-11-28T13:30",
+   "us_aqi": 152,
+   "european_aqi": 100,
+   "pm2_5": 33.1,
+   "pm10": 34.2,
+   "no2": 2.1,
+   "o3": 180.0,
+   "so2": 9.1,
+   "co": 316.0,
+   "units": "µg/m³",
+   "peak_24h_us_aqi": 181,
+   "peak_24h_at": "2026-11-28T22:00",
+   "source": "Open-Meteo Air Quality (CAMS global model)"
+  },
+  "air_quality_error": null,
+  "nowcast": {
+   "elevation_m": 74.0,
+   "window": {
+    "from": "2026-11-28T13:15",
+    "to": "2026-11-28T15:00"
+   },
+   "verdict": "dry",
+   "models_total": 5,
+   "models_wet": 0,
+   "agreement_pct": 100,
+   "earliest_start": null,
+   "max_total_mm": 0.0,
+   "models": [
+    {
+     "model": "Open-Meteo Best Match",
+     "wet": false,
+     "total_mm": 0.0,
+     "starts_at": null,
+     "max_probability_pct": 12
+    },
+    {
+     "model": "ECMWF",
+     "wet": false,
+     "total_mm": 0.0,
+     "starts_at": null,
+     "max_probability_pct": 12
+    },
+    {
+     "model": "GFS (NOAA)",
+     "wet": false,
+     "total_mm": 0.0,
+     "starts_at": null,
+     "max_probability_pct": 0
+    },
+    {
+     "model": "ICON (DWD)",
+     "wet": false,
+     "total_mm": 0.0,
+     "starts_at": null,
+     "max_probability_pct": 0
+    },
+    {
+     "model": "JMA",
+     "wet": false,
+     "total_mm": 0.0,
+     "starts_at": null,
+     "max_probability_pct": null
+    }
+   ]
+  },
+  "nowcast_error": null
+ },
+ "Pune": {
+  "fetched_at": "2026-11-28T08:18:59.172840+00:00",
+  "metar": null,
+  "metar_error": null,
+  "air_quality": {
+   "time": "2026-11-28T13:30",
+   "us_aqi": 95,
+   "european_aqi": 71,
+   "pm2_5": 22.7,
+   "pm10": 23.4,
+   "no2": 1.2,
+   "o3": 142.0,
+   "so2": 5.8,
+   "co": 272.0,
+   "units": "µg/m³",
+   "peak_24h_us_aqi": 100,
+   "peak_24h_at": "2026-11-29T02:00",
+   "source": "Open-Meteo Air Quality (CAMS global model)"
+  },
+  "air_quality_error": null,
+  "nowcast": {
+   "elevation_m": 561.0,
+   "window": {
+    "from": "2026-11-28T13:15",
+    "to": "2026-11-28T15:00"
+   },
+   "verdict": "dry",
+   "models_total": 5,
+   "models_wet": 0,
+   "agreement_pct": 100,
+   "earliest_start": null,
+   "max_total_mm": 0.0,
+   "models": [
+    {
+     "model": "Open-Meteo Best Match",
+     "wet": false,
+     "total_mm": 0.0,
+     "starts_at": null,
+     "max_probability_pct": 0
+    },
+    {
+     "model": "ECMWF",
+     "wet": false,
+     "total_mm": 0.0,
+     "starts_at": null,
+     "max_probability_pct": 0
+    },
+    {
+     "model": "GFS (NOAA)",
+     "wet": false,
+     "total_mm": 0.0,
+     "starts_at": null,
+     "max_probability_pct": 0
+    },
+    {
+     "model": "ICON (DWD)",
+     "wet": false,
+     "total_mm": 0.0,
+     "starts_at": null,
+     "max_probability_pct": 0
+    },
+    {
+     "model": "JMA",
+     "wet": false,
+     "total_mm": 0.0,
+     "starts_at": null,
+     "max_probability_pct": null
+    }
+   ]
+  },
+  "nowcast_error": null
+ },
+ "Kolhapur": {
+  "fetched_at": "2026-11-28T08:18:59.554957+00:00",
+  "metar": {
+   "icao": "VAKP",
+   "name": "Kolhapur Arpt",
+   "distance_km": 6.5,
+   "elevation_m": 612,
+   "observed_at": "2026-11-28T08:00:00.000Z",
+   "temp_c": 30,
+   "dew_point_c": 19,
+   "wind_dir_deg": 110,
+   "wind_variable": false,
+   "wind_kph": 11.1,
+   "gust_kph": null,
+   "visibility_km": 5.0,
+   "visibility_plus": false,
+   "qnh_hpa": 1018,
+   "weather": "smoke",
+   "clouds": [
+    "scattered clouds at 2500 ft",
+    "scattered clouds at 9000 ft"
+   ],
+   "flight_category": "MVFR",
+   "raw": "METAR VAKP 280800Z 11006KT 020V160 5000 FU SCT025 SCT090 30/19 Q1018 NOSIG",
+   "elevation_diff_m": -50
+  },
+  "metar_error": null,
+  "air_quality": {
+   "time": "2026-11-28T13:30",
+   "us_aqi": 88,
+   "european_aqi": 70,
+   "pm2_5": 18.8,
+   "pm10": 19.6,
+   "no2": 1.4,
+   "o3": 140.0,
+   "so2": 5.6,
+   "co": 277.0,
+   "units": "µg/m³",
+   "peak_24h_us_aqi": 93,
+   "peak_24h_at": "2026-11-28T19:00",
+   "source": "Open-Meteo Air Quality (CAMS global model)"
+  },
+  "air_quality_error": null,
+  "nowcast": {
+   "elevation_m": 562.0,
+   "window": {
+    "from": "2026-11-28T13:15",
+    "to": "2026-11-28T15:00"
+   },
+   "verdict": "dry",
+   "models_total": 5,
+   "models_wet": 0,
+   "agreement_pct": 100,
+   "earliest_start": null,
+   "max_total_mm": 0.0,
+   "models": [
+    {
+     "model": "Open-Meteo Best Match",
+     "wet": false,
+     "total_mm": 0.0,
+     "starts_at": null,
+     "max_probability_pct": 81
+    },
+    {
+     "model": "ECMWF",
+     "wet": false,
+     "total_mm": 0.0,
+     "starts_at": null,
+     "max_probability_pct": 81
+    },
+    {
+     "model": "GFS (NOAA)",
+     "wet": false,
+     "total_mm": 0.0,
+     "starts_at": null,
+     "max_probability_pct": 0
+    },
+    {
+     "model": "ICON (DWD)",
+     "wet": false,
+     "total_mm": 0.0,
+     "starts_at": null,
+     "max_probability_pct": 0
+    },
+    {
+     "model": "JMA",
+     "wet": false,
+     "total_mm": 0.0,
+     "starts_at": null,
+     "max_probability_pct": null
+    }
+   ]
+  },
+  "nowcast_error": null
+ },
+ "Nashik": {
+  "fetched_at": "2026-11-28T08:18:59.938316+00:00",
+  "metar": {
+   "icao": "VAOZ",
+   "name": "Ozar Arpt",
+   "distance_km": 18.7,
+   "elevation_m": 598,
+   "observed_at": "2026-11-28T08:00:00.000Z",
+   "temp_c": 30,
+   "dew_point_c": 16,
+   "wind_dir_deg": 140,
+   "wind_variable": false,
+   "wind_kph": 13.0,
+   "gust_kph": null,
+   "visibility_km": 6.0,
+   "visibility_plus": false,
+   "qnh_hpa": 1018,
+   "weather": null,
+   "clouds": [
+    "scattered clouds at 3000 ft"
+   ],
+   "flight_category": "MVFR",
+   "raw": "METAR VAOZ 280800Z 14007KT 6000 SCT030 30/16 Q1018 NOSIG",
+   "elevation_diff_m": -14
+  },
+  "metar_error": null,
+  "air_quality": {
+   "time": "2026-11-28T13:30",
+   "us_aqi": 85,
+   "european_aqi": 77,
+   "pm2_5": 27.9,
+   "pm10": 28.5,
+   "no2": 1.4,
+   "o3": 154.0,
+   "so2": 10.4,
+   "co": 272.0,
+   "units": "µg/m³",
+   "peak_24h_us_aqi": 107,
+   "peak_24h_at": "2026-11-28T19:00",
+   "source": "Open-Meteo Air Quality (CAMS global model)"
+  },
+  "air_quality_error": null,
+  "nowcast": {
+   "elevation_m": 584.0,
+   "window": {
+    "from": "2026-11-28T13:15",
+    "to": "2026-11-28T15:00"
+   },
+   "verdict": "dry",
+   "models_total": 5,
+   "models_wet": 0,
+   "agreement_pct": 100,
+   "earliest_start": null,
+   "max_total_mm": 0.0,
+   "models": [
+    {
+     "model": "Open-Meteo Best Match",
+     "wet": false,
+     "total_mm": 0.0,
+     "starts_at": null,
+     "max_probability_pct": 0
+    },
+    {
+     "model": "ECMWF",
+     "wet": false,
+     "total_mm": 0.0,
+     "starts_at": null,
+     "max_probability_pct": 0
+    },
+    {
+     "model": "GFS (NOAA)",
+     "wet": false,
+     "total_mm": 0.0,
+     "starts_at": null,
+     "max_probability_pct": 0
+    },
+    {
+     "model": "ICON (DWD)",
+     "wet": false,
+     "total_mm": 0.0,
+     "starts_at": null,
+     "max_probability_pct": 0
+    },
+    {
+     "model": "JMA",
+     "wet": false,
+     "total_mm": 0.0,
+     "starts_at": null,
+     "max_probability_pct": null
+    }
+   ]
+  },
+  "nowcast_error": null
+ },
+ "Chhatrapati Sambhajinagar": {
+  "fetched_at": "2026-11-28T08:19:00.322655+00:00",
+  "metar": {
+   "icao": "VAAU",
+   "name": "Aurangabad Arpt",
+   "distance_km": 5.9,
+   "elevation_m": 578,
+   "observed_at": "2026-11-28T08:00:00.000Z",
+   "temp_c": 29,
+   "dew_point_c": 17,
+   "wind_dir_deg": 80,
+   "wind_variable": false,
+   "wind_kph": 3.7,
+   "gust_kph": null,
+   "visibility_km": 3.0,
+   "visibility_plus": false,
+   "qnh_hpa": 1017,
+   "weather": "haze",
+   "clouds": [
+    "few clouds at 2000 ft",
+    "scattered clouds at 2500 ft"
+   ],
+   "flight_category": "IFR",
+   "raw": "METAR VAAU 280800Z 08002KT 3000 HZ FEW020 SCT025 29/17 Q1017 NOSIG",
+   "elevation_diff_m": 15
+  },
+  "metar_error": null,
+  "air_quality": {
+   "time": "2026-11-28T13:30",
+   "us_aqi": 109,
+   "european_aqi": 75,
+   "pm2_5": 39.7,
+   "pm10": 41.0,
+   "no2": 0.9,
+   "o3": 150.0,
+   "so2": 14.4,
+   "co": 273.0,
+   "units": "µg/m³",
+   "peak_24h_us_aqi": 116,
+   "peak_24h_at": "2026-11-28T21:00",
+   "source": "Open-Meteo Air Quality (CAMS global model)"
+  },
+  "air_quality_error": null,
+  "nowcast": {
+   "elevation_m": 593.0,
+   "window": {
+    "from": "2026-11-28T13:15",
+    "to": "2026-11-28T15:00"
+   },
+   "verdict": "dry",
+   "models_total": 5,
+   "models_wet": 0,
+   "agreement_pct": 100,
+   "earliest_start": null,
+   "max_total_mm": 0.0,
+   "models": [
+    {
+     "model": "Open-Meteo Best Match",
+     "wet": false,
+     "total_mm": 0.0,
+     "starts_at": null,
+     "max_probability_pct": 0
+    },
+    {
+     "model": "ECMWF",
+     "wet": false,
+     "total_mm": 0.0,
+     "starts_at": null,
+     "max_probability_pct": 0
+    },
+    {
+     "model": "GFS (NOAA)",
+     "wet": false,
+     "total_mm": 0.0,
+     "starts_at": null,
+     "max_probability_pct": 0
+    },
+    {
+     "model": "ICON (DWD)",
+     "wet": false,
+     "total_mm": 0.0,
+     "starts_at": null,
+     "max_probability_pct": 0
+    },
+    {
+     "model": "JMA",
+     "wet": false,
+     "total_mm": 0.0,
+     "starts_at": null,
+     "max_probability_pct": null
+    }
+   ]
+  },
+  "nowcast_error": null
+ },
+ "Nagpur": {
+  "fetched_at": "2026-11-28T08:19:00.704560+00:00",
+  "metar": {
+   "icao": "VANP",
+   "name": "Nagpur/Ambedkar Intl",
+   "distance_km": 7.2,
+   "elevation_m": 309,
+   "observed_at": "2026-11-28T08:00:00.000Z",
+   "temp_c": 27,
+   "dew_point_c": 11,
+   "wind_dir_deg": 10,
+   "wind_variable": false,
+   "wind_kph": 5.6,
+   "gust_kph": null,
+   "visibility_km": 4.0,
+   "visibility_plus": false,
+   "qnh_hpa": 1019,
+   "weather": "haze",
+   "clouds": [
+    "no significant cloud"
+   ],
+   "flight_category": "IFR",
+   "raw": "METAR VANP 280800Z 01003KT 4000 HZ NSC 27/11 Q1019 NOSIG",
+   "elevation_diff_m": 2
+  },
+  "metar_error": null,
+  "air_quality": {
+   "time": "2026-11-28T13:30",
+   "us_aqi": 116,
+   "european_aqi": 71,
+   "pm2_5": 46.6,
+   "pm10": 48.7,
+   "no2": 12.4,
+   "o3": 141.0,
+   "so2": 59.5,
+   "co": 335.0,
+   "units": "µg/m³",
+   "peak_24h_us_aqi": 144,
+   "peak_24h_at": "2026-11-29T12:00",
+   "source": "Open-Meteo Air Quality (CAMS global model)"
+  },
+  "air_quality_error": null,
+  "nowcast": {
+   "elevation_m": 311.0,
+   "window": {
+    "from": "2026-11-28T13:15",
+    "to": "2026-11-28T15:00"
+   },
+   "verdict": "dry",
+   "models_total": 5,
+   "models_wet": 0,
+   "agreement_pct": 100,
+   "earliest_start": null,
+   "max_total_mm": 0.0,
+   "models": [
+    {
+     "model": "Open-Meteo Best Match",
+     "wet": false,
+     "total_mm": 0.0,
+     "starts_at": null,
+     "max_probability_pct": 0
+    },
+    {
+     "model": "ECMWF",
+     "wet": false,
+     "total_mm": 0.0,
+     "starts_at": null,
+     "max_probability_pct": 0
+    },
+    {
+     "model": "GFS (NOAA)",
+     "wet": false,
+     "total_mm": 0.0,
+     "starts_at": null,
+     "max_probability_pct": 0
+    },
+    {
+     "model": "ICON (DWD)",
+     "wet": false,
+     "total_mm": 0.0,
+     "starts_at": null,
+     "max_probability_pct": 0
+    },
+    {
+     "model": "JMA",
+     "wet": false,
+     "total_mm": 0.0,
+     "starts_at": null,
+     "max_probability_pct": null
+    }
+   ]
+  },
+  "nowcast_error": null
+ }
+}
